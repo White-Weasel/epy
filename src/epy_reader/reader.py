@@ -1467,7 +1467,10 @@ class Reader:
                             rows, cols = self.screen.getmaxyx()
                             curses.resize_term(rows, cols)
                         if cols < 22 or rows < 12:
-                            sys.exit("ERROR: Screen was too small (min 22cols x 12rows).")
+                            # Bandaid fix to make reading possible on very small terminal.
+                            #  Uncomment this if there is any error
+                            # sys.exit("ERROR: Screen was too small (min 22cols x 12rows).")
+                            pass
                         if cols <= reading_state.textwidth + 4:
                             return ReadingState(
                                 content_index=reading_state.content_index,
