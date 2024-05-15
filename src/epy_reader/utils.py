@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import textwrap
+import zipfile
 from functools import wraps
 from typing import List, Mapping, Optional, Sequence, Tuple, Union
 
@@ -26,7 +27,14 @@ def get_ebook_obj(filepath: str) -> Ebook:
     elif file_ext in {".azw", ".azw3"}:
         return Azw(filepath)
     else:
-        sys.exit("ERROR: Format not supported. (Supported: epub, fb2)")
+        try:
+            with zipfile.ZipFile(filepath, "r") as zf:
+                if 'META-INF/container.xml' in zf.namelist():
+                    epub = Epub(filepath)
+                    return epub
+            sys.exit("ERROR: Format not supported. (Supported: epub, fb2)")
+        except Exception as e:
+            sys.exit(f"ERROR: Python error: {e}")
 
 
 def safe_curs_set(state: int) -> None:
