@@ -86,7 +86,8 @@ class Epub(Ebook):
         return tuple(contents)
 
     @staticmethod
-    def _get_tocs(toc: ET.Element, version: str, contents: Sequence[str]) -> Tuple[TocEntry, ...]:
+    def _get_tocs(toc: ET.Element, version: str, contents: Sequence[str],
+                  root_dirpath: str = None, toc_path: str = None) -> Tuple[TocEntry, ...]:
         try:
             # EPUB3
             if version in {"1.0", "2.0"}:
@@ -95,6 +96,12 @@ class Epub(Ebook):
                 navPoints = toc.findall(
                     "XHTML:body//XHTML:nav[@EPUB:type='toc']//XHTML:a", Epub.NAMESPACE
                 )
+
+            # The nav href can be a relative path, to get the correct TOC,
+            # we will need to convert content path and toc path into absolute path first
+            if root_dirpath and toc_path:
+                contents_abs_path = [root_dirpath + path for path in contents]
+            pass
 
             toc_entries: List[TocEntry] = []
             for navPoint in navPoints:
@@ -117,7 +124,11 @@ class Epub(Ebook):
                 src_id = src.split("#")
 
                 try:
-                    idx = contents.index(unquote(src_id[0]))
+                    if root_dirpath and toc_path:
+                        abs_src = os.path.normpath(os.path.join(os.path.split(toc_path)[0], src))
+                        idx = contents_abs_path.index(abs_src)
+                    else:
+                        idx = contents.index(unquote(src_id[0]))
                 except ValueError:
                     continue
 
@@ -171,7 +182,7 @@ class Epub(Ebook):
         assert relative_toc_path is not None
         toc_path = self.root_dirpath + relative_toc_path
         toc = ET.parse(self.file.open(toc_path)).getroot()
-        self.toc_entries = Epub._get_tocs(toc, version, contents)  # *self.contents (absolute path)
+        self.toc_entries = Epub._get_tocs(toc, version, contents, self.root_dirpath, toc_path)  # *self.contents (absolute path)
 
     def get_raw_text(self, content_path: Union[str, ET.Element]) -> str:
         assert isinstance(self.file, zipfile.ZipFile)
